@@ -15,8 +15,9 @@ var state = {
         ['b', null, 'b', null, 'b', null, 'b', null, 'b', null],
         [null, 'b', null, 'b', null, 'b', null, 'b', null, 'b'],
         ['b', null, 'b', null, 'b', null, 'b', null, 'b', null]
-    ]
-}
+    ],
+    legalMoves: []
+};
 
 /** @function getLegalMoves
  * returns a list of legal moves for the specified
@@ -61,16 +62,11 @@ function getLegalMoves(piece, x, y) {
  */
 function checkSlide(moves, x, y) {
     // Check square is on grid
-    // console.log("1");
     if (x < 0 || x > 9 || y < 0 || y > 9) return;
     // check square is unoccupied
-    // console.log("2");
-    if (state.board[x][y]) {
-        // console.log(x + " " + y);
+    if (state.board[x][y])
         return;
-    }
     // legal move!  Add it to the move list
-    // console.log("3");
     moves.push({type: 'slide', x: x, y: y});
 }
 
@@ -138,15 +134,11 @@ function checkLanding(moves, jumps, piece, cx, cy, lx, ly) {
     // Check landing square is on grid
     if (lx < 0 || lx > 9 || ly < 0 || ly > 9) return;
     // Check landing square is unoccupied
-    console.log(1);
     if (state.board[lx][ly]) return;
     //check if there is a piece to capture
-    console.log(2);
     if (!state.board[cx][cy]) return;
-    console.log(3);
     // Check capture square is occuped by opponent
     if ((piece == 'b' || piece == 'bk') && (state.board[cx][cy] == 'b' || state.board[cx][cy] == 'bk')) return;
-    console.log(4);
     if ((piece == 'w' || piece == 'wk') && (state.board[cx][cy] == 'w' || state.board[cx][cy] == 'wk')) return;
     // legal jump! add it to the moves list
     jumps.captures.push({x: cx, y: cy});
@@ -160,16 +152,35 @@ function checkLanding(moves, jumps, piece, cx, cy, lx, ly) {
     checkJump(moves, jumps, piece, lx, ly);
 }
 
+function compareMoves(m1, m2) {
+    return JSON.stringify(m1) === JSON.stringify(m2);
+}
+
 /** @function ApplyMove
  * A function to apply the selected move to the game
+ * @param x of piece that we are moving
+ * @param y of piece that we are moving
  * @param {object} move - the move to apply.
  */
 function applyMove(x, y, move) {
+    //check if the right player is playing
+    if (state.board[x][y] != state.turn) return;
+    state.legalMoves = getLegalMoves(state.turn, x, y);
+    validMove = false;
+    state.legalMoves.forEach(function (item) {
+        validMove = compareMoves(move, item);
+    });
+
+    if (state.legalMoves.length == 0 || !validMove) {
+        console.log("Illegal move!");
+        return;
+    }
     // TODO: Apply the move
     if (move.type === 'slide') {
         state.board[move.x][move.y] = state.board[x][y];
         state.board[x][y] = null;
     } else {
+        state.board[x][y] = null;
         move.captures.forEach(function (square) {
             state.board[square.x][square.y] = null;
         });
