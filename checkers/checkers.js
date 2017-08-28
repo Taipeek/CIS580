@@ -9,8 +9,8 @@ var state = {
         ['w', null, 'w', null, 'w', null, 'w', null, 'w', null],
         [null, 'w', null, 'w', null, 'w', null, 'w', null, 'w'],
         [null, null, null, null, null, null, null, null, null, null],
-        [null, null, null, null, null, null, null, null, null, null],
-        [null, null, null, null, null, null, null, null, null, null],
+        [null, null, null, 'w', null, null, null, null, null, null],
+        [null, null, 'b', null, null, null, null, null, null, null],
         [null, null, null, null, null, null, null, null, null, null],
         ['b', null, 'b', null, 'b', null, 'b', null, 'b', null],
         [null, 'b', null, 'b', null, 'b', null, 'b', null, 'b'],
@@ -61,16 +61,16 @@ function getLegalMoves(piece, x, y) {
  */
 function checkSlide(moves, x, y) {
     // Check square is on grid
-    console.log("1");
+    // console.log("1");
     if (x < 0 || x > 9 || y < 0 || y > 9) return;
     // check square is unoccupied
-    console.log("2");
+    // console.log("2");
     if (state.board[x][y]) {
-        console.log(x + " " + y);
+        // console.log(x + " " + y);
         return;
     }
     // legal move!  Add it to the move list
-    console.log("3");
+    // console.log("3");
     moves.push({type: 'slide', x: x, y: y});
 }
 
@@ -104,10 +104,10 @@ function checkJump(moves, jumps, piece, x, y) {
     switch (piece) {
         case 'b': // black can only move down the board diagonally
             checkLanding(moves, copyJumps(jumps), piece, x - 1, y + 1, x - 2, y + 2);
-            checkLanding(moves, copyJumps(jumps), piece, x + 1, y + 1, x + 2, y + 2);
+            checkLanding(moves, copyJumps(jumps), piece, x - 1, y - 1, x - 2, y - 2);
             break;
         case 'w':  // white can only move up the board diagonally
-            checkLanding(moves, copyJumps(jumps), piece, x - 1, y - 1, x - 2, y - 2);
+            checkLanding(moves, copyJumps(jumps), piece, x + 1, y + 1, x + 2, y + 2);
             checkLanding(moves, copyJumps(jumps), piece, x + 1, y - 1, x + 2, y - 2);
             break;
         case 'bk': // kings can move diagonally any direction
@@ -138,10 +138,16 @@ function checkLanding(moves, jumps, piece, cx, cy, lx, ly) {
     // Check landing square is on grid
     if (lx < 0 || lx > 9 || ly < 0 || ly > 9) return;
     // Check landing square is unoccupied
+    console.log(1);
     if (state.board[lx][ly]) return;
+    //check if there is a piece to capture
+    console.log(2);
+    if (!state.board[cx][cy]) return;
+    console.log(3);
     // Check capture square is occuped by opponent
-    if (piece == 'b' || 'bk' && state.board[cx][cy] != 'w' || state.board[cx][cy] != 'wk') return;
-    if (piece == 'w' || 'wk' && state.board[cx][cy] != 'b' || state.board[cx][cy] != 'bk') return;
+    if ((piece == 'b' || piece == 'bk') && (state.board[cx][cy] == 'b' || state.board[cx][cy] == 'bk')) return;
+    console.log(4);
+    if ((piece == 'w' || piece == 'wk') && (state.board[cx][cy] == 'w' || state.board[cx][cy] == 'wk')) return;
     // legal jump! add it to the moves list
     jumps.captures.push({x: cx, y: cy});
     jumps.landings.push({x: lx, y: ly});
