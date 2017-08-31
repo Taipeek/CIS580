@@ -1,5 +1,5 @@
 // checkers.js
-
+const readline = require('readline');
 /** The state of the game */
 var state = {
     over: false,
@@ -218,7 +218,7 @@ function nextTurn() {
 }
 
 function printBoard() {
-    console.log("____________________________________________")
+    console.log("  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |")
     state.board.forEach(function (row, y) {
         var text = "|";
         row.forEach(function (column, x) {
@@ -226,13 +226,67 @@ function printBoard() {
             var char = column === "b" ? "\u25CF" : "\u25CB"
             text += " " + (column === null ? fill : char) + " |";
         });
-        console.log(text);
+        console.log(y+" "+text);
     });
-    console.log("____________________________________________")
+    console.log("   _________________________________________")
 }
 
 function main() {
-    printBoard();
+
+
+    var q = false;
+        printBoard();
+        console.log(state.turn + "'s turn");
+        var myTurn = state.turn;
+        rl.question('Pick a piece to move (x is top to down, y is left to right) ', (answer) => {
+            var matches = /([0-9]),?\s?([0-9])/.exec(answer);
+            if (matches) {
+                var x = matches[1];
+                var y = matches[2];
+                var moves = getLegalMoves(state.turn, x, y);
+                if (moves.length != 0) {
+                    moves.forEach(function (move) {
+                        if (move.type == 'slide') {
+                            console.log(move);
+                            console.log('You can slide to ' + move.x +', ' + move.y);
+                        } else {
+                            var landing = move.landings[move.landings.length - 1];
+                            console.log('You can jump to ' + landing.x + ", " + landing.y);
+                        }
+                    });
+
+                        rl.question('Pick where to slide/jump ', (answer) => {
+                            var matches2 = /([0-9]),?\s?([0-9])/.exec(answer);
+                            for (var m in moves) {
+                                if (m.type == 'slide') {
+                                    if (m.x == matches2[1] && m.y == matches2[2]) {
+                                        applyMove(x, y, m);
+                                        main();
+                                        break;
+                                    }
+                                } else {
+                                    var l = m.landings[m.landings.length - 1];
+                                    if (l.x == matches2[1] && l.y == matches2[2]) {
+                                        applyMove(x, y, m);
+                                        main();
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+
+                }
+                else {
+                    console.log('you cant move this piece');
+                }
+            } else console.log('Invalid move');
+        });
+    // rl.close();
 }
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 main();
