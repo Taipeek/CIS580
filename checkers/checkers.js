@@ -18,7 +18,13 @@ var state = {
         [null, 'b', null, 'b', null, 'b', null, 'b', null, 'b'],
         ['b', null, 'b', null, 'b', null, 'b', null, 'b', null]
     ]
-}
+};
+
+// initialize readline
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 /** @function getLegalMoves
  * returns a list of legal moves for the specified
@@ -31,6 +37,10 @@ var state = {
  */
 function getLegalMoves(piece, x, y) {
     var moves = [];
+    if (state.turn != piece){
+        console.log("Not "+piece+"'s turn");
+        return moves;
+    }
     switch (piece) {
         case 'b': // black can only move down the board diagonally
             checkSlide(moves, x - 1, y - 1);
@@ -237,7 +247,7 @@ function getJumpString(move) {
     return "jump to " + jumps + " capturing " + move.captures.length + " piece" + ((move.captures.length > 1) ? 's' : '');
 }
 
-function processTurn(rl){
+function processTurn(){
     // print the board
     printBoard();
     // offer instructions
@@ -253,7 +263,7 @@ function processTurn(rl){
             var moves = getLegalMoves(piece, x, y);
             if (moves.length === 0) {
                 console.log("\nNo legal moves for ", piece, "at", x, ",", y);
-                processTurn(rl);
+                processTurn();
             } else {
                 // Print available moves
                 console.log("\nAvailable moves for ", match[1] + "," + match[2]);
@@ -267,13 +277,13 @@ function processTurn(rl){
                 });
                 rl.question("Pick your move from the list: ", function (answer) {
                     var command = answer.substring(0, 1);
-                    if (command === "c") return;
+                    if (command === "c") return processTurn();
                     command = parseInt(command);
-                    if (command === NaN || command >= moves.length-1) return;
+                    if (command === NaN || command >= moves.length-1) return  processTurn();
                     applyMove(x, y, moves[command]);
                     checkForVictory();
                     nextTurn();
-                    processTurn(rl);
+                    processTurn();
 
                 });
             }
@@ -286,12 +296,6 @@ function processTurn(rl){
  * Starts the checkers game.
  */
 function main() {
-    // initialize readline
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-
     processTurn(rl);
 
 }
