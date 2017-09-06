@@ -1,1 +1,32 @@
 /* checkers.css */
+#game-board{
+    border: 1px solid black;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 1020px;
+    height: 1020px;
+}
+
+.square{
+    border: 1px solid black;
+    width: 100px;
+    height: 100px;
+}
+.black{
+    background-color: darkgray;
+}
+
+.checker{
+    width:90px;
+    margin: 5px;
+    height: 90px;
+    border-radius: 50%;
+    box-shadow: 2px 2px 4px grey;
+}
+.checker-w{
+    background-color: whitesmoke;
+}
+.checker-b{
+    background-color: black;
+}
