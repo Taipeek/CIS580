@@ -8,9 +8,9 @@ var state = {
         [null, 'w', null, 'w', null, 'w', null, 'w', null, 'w'],
         ['w', null, 'w', null, 'w', null, 'w', null, 'w', null],
         [null, 'w', null, 'w', null, 'w', null, 'w', null, 'w'],
-        ['w', null, null, null, 'w', null, 'w', null, 'w', null],
+        ['w', null, 'w', null, 'w', null, 'w', null, 'w', null],
         [null, null, null, null, null, null, null, null, null, null],
-        [null, null, 'w', null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null, null, null],
         [null, 'b', null, 'b', null, 'b', null, 'b', null, 'b'],
         ['b', null, 'b', null, 'b', null, 'b', null, 'b', null],
         [null, 'b', null, 'b', null, 'b', null, 'b', null, 'b'],
@@ -34,12 +34,12 @@ function getLegalMoves(piece, x, y) {
         case 'b': // black can only move down the board diagonally
             checkSlide(moves, x - 1, y - 1);
             checkSlide(moves, x + 1, y - 1);
-            checkJump(moves, {captures: [], landings: []}, piece, x, y);
+            checkJump(moves, {captures: [], landings: [], x: x, y: y}, piece, x, y);
             break;
         case 'w':  // white can only move up the board diagonally
             checkSlide(moves, x - 1, y + 1);
             checkSlide(moves, x + 1, y + 1);
-            checkJump(moves, {captures: [], landings: []}, piece, x, y);
+            checkJump(moves, {captures: [], landings: [], x: x, y: y}, piece, x, y);
             break;
         case 'bk': // kings can move diagonally any direction
         case 'wk': // kings can move diagonally any direction
@@ -47,7 +47,7 @@ function getLegalMoves(piece, x, y) {
             checkSlide(moves, x + 1, y + 1);
             checkSlide(moves, x - 1, y - 1);
             checkSlide(moves, x + 1, y - 1);
-            checkJump(moves, {captures: [], landings: []}, piece, x, y);
+            checkJump(moves, {captures: [], landings: [], x: x, y: y}, piece, x, y);
             break;
     }
     return moves;
@@ -78,9 +78,11 @@ function copyJumps(jumps) {
     // Use Array.prototype.slice() to create a copy
     // of the landings and captures array.
     var newJumps = {
+        x: jumps.x,
+        y: jumps.y,
         landings: jumps.landings.slice(),
         captures: jumps.captures.slice()
-    }
+    };
     return newJumps;
 }
 
@@ -130,13 +132,19 @@ function checkJump(moves, jumps, piece, x, y) {
  * @param {integer} ly - the 'landing' y position of the peice is jumping onto
  */
 function checkLanding(moves, jumps, piece, cx, cy, lx, ly) {
+    // Check that we're not jumping back to our starting position
+    if (lx == jumps.x && ly == jumps.y) return;
     // Check landing square is on grid
     if (lx < 0 || lx > 9 || ly < 0 || ly > 9) return;
     // Check landing square is unoccupied
     if (state.board[ly][lx]) return;
-    // Check capture square is occuped by opponent
-    if ((piece === 'b' || piece === 'bk') && !(state.board[cy][cx] === 'w' || state.board[cy][cx] === 'wk')) return;
-    if ((piece === 'w' || piece === 'wk') && !(state.board[cy][cx] === 'b' || state.board[cy][cx] === 'bk')) return;
+    // Check capture square is occupied by opponent
+    if (state.turn === 'b' && !(state.board[cy][cx] === 'w' || state.board[cy][cx] === 'wk')) return;
+    if (state.turn === 'w' && !(state.board[cy][cx] === 'b' || state.board[cy][cx] === 'bk')) return;
+    // Check that we haven't landed on this square previously
+    if (0 < jumps.landings.findIndex(function (landing) {
+            return landing.x == lx && landing.y == ly;
+        })) return;
     // legal jump! add it to the moves list
     jumps.captures.push({x: cx, y: cy});
     jumps.landings.push({x: lx, y: ly});
@@ -156,7 +164,10 @@ function checkLanding(moves, jumps, piece, cx, cy, lx, ly) {
 function applyMove(x, y, move) {
     // TODO: Apply the move
     if (move.type === "slide") {
-        state.board[move.y][move.x] = state.board[y][x];
+        if ((state.board[y][x] == "b" && move.y == 0 ) || state.turn == "w" && move.y == 9)
+            state.board[move.y][move.x] = createKing(state.turn);
+        else
+            state.board[move.y][move.x] = state.board[y][x];
         state.board[y][x] = null;
     } else {
         move.captures.forEach(function (square) {
@@ -165,11 +176,25 @@ function applyMove(x, y, move) {
             state.board[square.y][square.x] = null;
         });
         var index = move.landings.length - 1;
-        state.board[move.landings[index].y][move.landings[index].x] = state.board[y][x];
+
+        if ((state.board[y][x] == "b" && move.y == 0 ) || state.turn == "w" && move.y == 9)
+            state.board[move.landings[index].y][move.landings[index].x] = createKing(state.turn);
+        else
+            state.board[move.landings[index].y][move.landings[index].x] = state.board[y][x];
         state.board[y][x] = null;
     }
 }
-
+function createKing(piece) {
+    switch (piece) {
+        case 'b':
+            return 'bk';
+        case 'w':
+            return 'wk';
+        case 'bk':
+        case 'wk':
+            return piece;
+    }
+}
 /** @function checkForVictory
  * Checks to see if a victory has been actived
  * (All peices of one color have been captured)
@@ -198,45 +223,147 @@ function nextTurn() {
     else state.turn = 'b';
 }
 
+/** @function clearHighlights
+ * Clears all highligted squares
+ */
+function clearHighlights() {
+    var highlighted = document.querySelectorAll('.highlight');
+    highlighted.forEach(function (elem) {
+        elem.classList.remove('highlight');
+        elem.draggable = false;
+        elem.ondragstart = undefined;
+        elem.ondragover = undefined;
+        elem.ondragleave = undefined;
+        elem.ondrop = undefined;
+        elem.classList.remove('droptarget');
+        elem.dataset.move = undefined;
+    });
+    var highlighted = document.querySelectorAll('.capture');
+    highlighted.forEach(function (elem) {
+        elem.classList.remove('capture');
+
+    });
+}
+
+/** @function handleCheckerClick
+ * Click handler for checker
+ */
 function handleCheckerClick(event) {
     event.preventDefault();
-    var parent = event.target.parentNode;
-    var x = parent.id.charAt(7);
-    var y = parent.id.charAt(9);
-    var moves = getLegalMoves(state.board[y][x], parseInt(x), parseInt(y));
+    var parentId = event.target.parentElement.id;
+    var x = parseInt(parentId.charAt(7));
+    var y = parseInt(parentId.charAt(9));
+    var piece = state.board[y][x];
+    // Clear old highlights
+    clearHighlights();
+    // Make sure the checker is the player's
+    if (piece.charAt(0) !== state.turn) return;
+    // Get legal moves
+    var moves = getLegalMoves(state.board[y][x], x, y);
+    // mark checker to move
+    event.target.classList.add('highlight');
+    event.target.draggable = true;
+    event.target.ondragstart = handleDragStart;
+    // Mark squares available for moves
     moves.forEach(function (move) {
-        if (move.type === "slide") {
-            document.getElementById("square-" + move.x + "-" + move.y).classList.add('green');
+        if (move.type === 'slide') {
+            var square = document.getElementById('square-' + move.x + '-' + move.y);
+            square.classList.add('highlight');
+            square.ondragover = handleDragOverSquare;
+            square.ondragleave = handleDragExitSquare;
+            square.ondrop = handleDropSquare;
+            square.dataset.move = JSON.stringify(move);
         } else {
             var landing = move.landings[move.landings.length - 1];
             move.captures.forEach(function (capture) {
-                document.getElementById("square-" + capture.x + "-" + capture.y).classList.add('orange');
+                document.getElementById("square-" + capture.x + "-" + capture.y).classList.add('highlight');
+                document.getElementById("square-" + capture.x + "-" + capture.y).classList.add('capture');
             });
-            document.getElementById("square-" + landing.x + "-" + landing.y).classList.add('green');
+            document.getElementById("square-" + landing.x + "-" + landing.y).classList.add('highlight');
+            var square = document.getElementById('square-' + landing.x + '-' + landing.y);
+            square.classList.add('highlight');
+            square.ondragover = handleDragOverSquare;
+            square.ondragleave = handleDragExitSquare;
+            square.ondrop = handleDropSquare;
+            square.dataset.move = JSON.stringify(move);
         }
     });
 }
 
+function handleDragOverSquare(event) {
+    event.preventDefault();
+    event.target.classList.add('droptarget')
+}
+function handleDragExitSquare(event) {
+    event.preventDefault();
+    event.target.classList.remove('droptarget')
+}
+function handleDropSquare(event) {
+    event.preventDefault();
+    event.target.classList.remove('droptarget');
+    var xy = event.dataTransfer.getData('text');
+    var x = parseInt(xy[0]);
+    var y = parseInt(xy[1]);
+    var move = JSON.parse(event.target.dataset.move);
+    applyMove(x, y, move);
+    switch (move.type) {
+        case "slide":
+            var oldSquare = document.getElementById('square-' + x + "-" + y);
+            oldSquare.removeChild(oldSquare.firstChild);
+            var checker = document.createElement('div');
+            checker.classList.add('checker');
+            checker.classList.add('checker-' + state.board[move.y][move.x]);
+            checker.onclick = handleCheckerClick;
+            event.target.appendChild(checker);
+            break;
+        case "jump":
+            var oldSquare = document.getElementById('square-' + x + "-" + y);
+            oldSquare.removeChild(oldSquare.firstChild);
+            move.captures.forEach(function (capture) {
+                var oldSquare = document.getElementById('square-' + capture.x + "-" + capture.y);
+                oldSquare.removeChild(oldSquare.firstChild);
+            });
+            var landing = move.landings[move.landings.length - 1];
+            var checker = document.createElement('div');
+            checker.classList.add('checker');
+            checker.classList.add('checker-' + state.board[landing.y][landing.x]);
+            checker.onclick = handleCheckerClick;
+            event.target.appendChild(checker);
+            break;
+
+    }
+    clearHighlights();
+    nextTurn();
+}
+function handleDragStart(event) {
+    var parentId = event.currentTarget.parentElement.id;
+    var x = parentId.charAt(7);
+    var y = parentId.charAt(9);
+    event.dataTransfer.setData('text/plain', x + y)
+}
+/** @function setup
+ * Sets up the game environment
+ */
 function setup() {
-    var board = document.createElement("section");
-    board.id = "game-board";
+    var board = document.createElement('section');
+    board.id = 'game-board';
     document.body.appendChild(board);
-    state.board.forEach(function (y, iy) {
-        y.forEach(function (x, ix) {
+    for (var y = 0; y < state.board.length; y++) {
+        for (var x = 0; x < state.board[y].length; x++) {
             var square = document.createElement('div');
+            square.id = "square-" + x + "-" + y;
             square.classList.add('square');
-            square.id = 'square-' + ix + "-" + iy;
-            if ((ix + iy) % 2 == 1) square.classList.add('black');
-            if (x) {
+            if ((y + x) % 2 === 1) square.classList.add('black');
+            board.appendChild(square);
+            if (state.board[y][x]) {
                 var checker = document.createElement('div');
                 checker.classList.add('checker');
-                checker.classList.add('checker-' + x);
+                checker.classList.add('checker-' + state.board[y][x]);
                 checker.onclick = handleCheckerClick;
                 square.appendChild(checker);
             }
-            board.appendChild(square);
-        });
-    });
+        }
+    }
 }
 
 setup();
